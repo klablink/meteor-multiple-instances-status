@@ -1,6 +1,8 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
+import { Random } from 'meteor/random';
 
+// eslint-disable-next-line no-undef
 const events = new (Npm.require('events').EventEmitter)();
 const collectionName = process.env.MULTIPLE_INSTANCES_COLLECTION_NAME || 'instances';
 const defaultPingInterval = (process.env.MULTIPLE_INSTANCES_PING_INTERVAL || 10); // default to 10s
@@ -39,6 +41,7 @@ InstancesRaw.indexes()
         }
     });
 
+// eslint-disable-next-line no-global-assign
 InstanceStatus = {
     name: undefined,
     extraInformation: undefined,
@@ -74,15 +77,15 @@ InstanceStatus = {
 
         try {
             // noinspection JSUnresolvedFunction
-            Promise.await(Instances.upsertAsync({ _id: InstanceStatus.id() }, instance));
+            await Instances.upsertAsync({ _id: InstanceStatus.id() }, instance);
             // noinspection JSUnresolvedFunction
-            const result = Promise.await(Instances.findOneAsync({ _id: InstanceStatus.id() }));
+            const result = await Instances.findOneAsync({ _id: InstanceStatus.id() });
 
             InstanceStatus.start();
 
             events.emit('registerInstance', result, instance);
 
-            process.on('exit', InstanceStatus.onExit);
+            process.on('beforeExit', InstanceStatus.onExit);
 
             return result;
         } catch (e) {
@@ -92,12 +95,12 @@ InstanceStatus = {
 
     async unregisterInstance() {
         try {
-            const result = Promise.await(Instances.removeAsync({ _id: InstanceStatus.id() }));
+            const result = await Instances.removeAsync({ _id: InstanceStatus.id() });
             InstanceStatus.stop();
 
             events.emit('unregisterInstance', InstanceStatus.id());
 
-            process.removeListener('exit', InstanceStatus.onExit);
+            process.removeListener('beforeExit', InstanceStatus.onExit);
 
             return result;
         } catch (e) {
@@ -123,7 +126,7 @@ InstanceStatus = {
     },
 
     async ping() {
-        const count = Promise.await(Instances.updateAsync(
+        const count = await Instances.updateAsync(
             {
                 _id: InstanceStatus.id(),
             },
@@ -131,7 +134,7 @@ InstanceStatus = {
                 $currentDate: {
                     _updatedAt: true,
                 },
-            }));
+            });
 
         if (count === 0) {
             await InstanceStatus.registerInstance(InstanceStatus.name, InstanceStatus.extraInformation);
