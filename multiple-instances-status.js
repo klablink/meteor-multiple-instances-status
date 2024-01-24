@@ -1,6 +1,8 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
+import { Random } from 'meteor/random';
 
+// eslint-disable-next-line no-undef
 const events = new (Npm.require('events').EventEmitter)();
 const collectionName = process.env.MULTIPLE_INSTANCES_COLLECTION_NAME || 'instances';
 const defaultPingInterval = (process.env.MULTIPLE_INSTANCES_PING_INTERVAL || 10); // default to 10s
@@ -39,6 +41,7 @@ InstancesRaw.indexes()
         }
     });
 
+// eslint-disable-next-line no-global-assign
 InstanceStatus = {
     name: undefined,
     extraInformation: undefined,
@@ -73,16 +76,16 @@ InstanceStatus = {
         }
 
         try {
+            // noinspection JSUnresolvedFunction
             await Instances.upsertAsync({ _id: InstanceStatus.id() }, instance);
+            // noinspection JSUnresolvedFunction
             const result = await Instances.findOneAsync({ _id: InstanceStatus.id() });
 
             InstanceStatus.start();
 
             events.emit('registerInstance', result, instance);
 
-            process.on('exit', InstanceStatus.onExit);
-
-            process.on('SIGTERM', InstanceStatus.onExit);
+            process.on('beforeExit', InstanceStatus.onExit);
 
             return result;
         } catch (e) {
@@ -97,9 +100,7 @@ InstanceStatus = {
 
             events.emit('unregisterInstance', InstanceStatus.id());
 
-            process.removeListener('exit', InstanceStatus.onExit);
-
-            process.on('SIGTERM', InstanceStatus.onExit);
+            process.removeListener('beforeExit', InstanceStatus.onExit);
 
             return result;
         } catch (e) {
@@ -140,13 +141,8 @@ InstanceStatus = {
         }
     },
 
-    onExit() {
-        // await InstanceStatus.unregisterInstance();
-        InstanceStatus.unregisterInstance()
-            .then(function () {
-                process.exit(0);
-            });
-        return false;
+    async onExit() {
+        await InstanceStatus.unregisterInstance();
     },
 
     activeLogs() {
