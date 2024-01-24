@@ -73,16 +73,16 @@ InstanceStatus = {
         }
 
         try {
-            // noinspection JSUnresolvedFunction
-            Promise.await(Instances.upsertAsync({ _id: InstanceStatus.id() }, instance));
-            // noinspection JSUnresolvedFunction
-            const result = Promise.await(Instances.findOneAsync({ _id: InstanceStatus.id() }));
+            await Instances.upsertAsync({ _id: InstanceStatus.id() }, instance);
+            const result = await Instances.findOneAsync({ _id: InstanceStatus.id() });
 
             InstanceStatus.start();
 
             events.emit('registerInstance', result, instance);
 
             process.on('exit', InstanceStatus.onExit);
+
+            process.on('SIGTERM', InstanceStatus.onExit);
 
             return result;
         } catch (e) {
@@ -92,12 +92,14 @@ InstanceStatus = {
 
     async unregisterInstance() {
         try {
-            const result = Promise.await(Instances.removeAsync({ _id: InstanceStatus.id() }));
+            const result = await Instances.removeAsync({ _id: InstanceStatus.id() });
             InstanceStatus.stop();
 
             events.emit('unregisterInstance', InstanceStatus.id());
 
             process.removeListener('exit', InstanceStatus.onExit);
+
+            process.on('SIGTERM', InstanceStatus.onExit);
 
             return result;
         } catch (e) {
@@ -123,7 +125,7 @@ InstanceStatus = {
     },
 
     async ping() {
-        const count = Promise.await(Instances.updateAsync(
+        const count = await Instances.updateAsync(
             {
                 _id: InstanceStatus.id(),
             },
@@ -131,15 +133,20 @@ InstanceStatus = {
                 $currentDate: {
                     _updatedAt: true,
                 },
-            }));
+            });
 
         if (count === 0) {
             await InstanceStatus.registerInstance(InstanceStatus.name, InstanceStatus.extraInformation);
         }
     },
 
-    async onExit() {
-        await InstanceStatus.unregisterInstance();
+    onExit() {
+        // await InstanceStatus.unregisterInstance();
+        InstanceStatus.unregisterInstance()
+            .then(function () {
+                process.exit(0);
+            });
+        return false;
     },
 
     activeLogs() {

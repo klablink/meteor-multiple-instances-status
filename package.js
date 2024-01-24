@@ -2,14 +2,14 @@ Package.describe({
   name: 'konecty:multiple-instances-status',
   summary: 'Keep a collection with active servers/instances',
   version: '1.2.0',
-  git: 'https://github.com/Konecty/meteor-multiple-instances-status'
+  git: 'https://github.com/Konecty/meteor-multiple-instances-status',
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('2.13.3');
+  api.versionsFrom(['2.13.3', '3.0-beta.0']);
 
   api.use('random');
-  api.use(['ecmascript', 'modules']);
+  api.use(['ecmascript', 'modules', 'mongo']);
 
   api.addFiles('multiple-instances-status.js', ['server']);
 
